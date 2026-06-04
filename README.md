@@ -32,6 +32,17 @@ CSVs to include, e.g. `?lists=NDZ,EMAIL`. Default: all six list types
 
 Missing/invalid key → `401`.
 
+### Sandbox mode
+
+The three data endpoints are also mounted under a `/sandbox` prefix with
+identical behavior:
+
+- `GET  /sandbox/data/download`
+- `POST /sandbox/data/upload`
+- `POST /sandbox/data/amend`
+
+`/preview` is dev-only and is **not** mirrored under `/sandbox`.
+
 ## Seed
 
 `src/lib/seed.ts` holds sample consumers with personal info (name, DOB, ZIP,
