@@ -45,6 +45,14 @@ export default function Home() {
             <td style={cell}>no</td>
             <td style={cell}>personal.csv + derived hashes (HTML)</td>
           </tr>
+          <tr>
+            <td style={cell}>GET</td>
+            <td style={cell}>
+              <a href="/records">/records</a>
+            </td>
+            <td style={cell}>no</td>
+            <td style={cell}>persisted uploads + current state (HTML)</td>
+          </tr>
         </tbody>
       </table>
       <p>

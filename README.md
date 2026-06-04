@@ -4,8 +4,9 @@ Dev emulator of the **DROP Data Broker API** (California Delete Act),
 spec at `/Users/mike/code/fidesplus/drop/openapi.yaml`. Next.js / TypeScript
 port of the original FastAPI emulator.
 
-Three API endpoints, `X-API-KEY` header auth. No environment variables —
-the API keys, broker id, and defaults are baked in (see `src/lib/config.ts`).
+Three API endpoints, `X-API-KEY` header auth. The API keys, broker id, and
+defaults are baked in (see `src/lib/config.ts`); the only env var is the
+optional `DATABASE_URL` for upload persistence (see below).
 
 Baked-in API keys: `dev-key-123`, `broker-4821-key`. Broker id: `4821`.
 
@@ -25,6 +26,7 @@ npm run dev    # launch dev server (default http://localhost:3000)
 | POST   | `/data/upload`   | yes  | `UploadResponse` JSON (mode `new`) |
 | POST   | `/data/amend`    | yes  | `UploadResponse` JSON (mode `amend`) |
 | GET    | `/preview`       | no   | dev-only HTML table of `personal.csv` + derived hashes |
+| GET    | `/records`       | no   | HTML view of persisted uploads + current consumer state |
 
 `GET /data/download` accepts an optional `?lists=` query param to select which
 CSVs to include, e.g. `?lists=NDZ,EMAIL`. Default: all six list types
@@ -70,6 +72,33 @@ curl -H "X-API-KEY: dev-key-123" \
 
 Valid status codes: `2` exempt, `3` deleted, `4` opted out, `5` not found.
 
+## Persistence (Neon Postgres)
+
+Uploads and amends are recorded to Postgres when `DATABASE_URL` is set. On
+Vercel, add the **Neon** integration — it injects `DATABASE_URL` automatically.
+Locally, copy `.env.example` to `.env`. With no `DATABASE_URL`, persistence is
+silently skipped (the API behaves exactly as before).
+
+Each accepted file writes three things:
+
+- **`uploads`** — one audit row per file (mode, file name, broker id, `sandbox`
+  flag, accepted/rejected, message, row count, timestamp). Rejected files are
+  logged too.
+- **`upload_records`** — one row per parsed `Id,Status` line (full history).
+- **`records`** — current status per consumer, keyed by `(consumer_id, sandbox)`.
+  `new` inserts, `amend` updates. Upserted on each submission.
+
+Sandbox uploads (`/sandbox/data/*`) persist with `sandbox = true`.
+
+Schema is created lazily on the first write. To provision a fresh database up
+front:
+
+```bash
+DATABASE_URL=postgres://... npm run db:init
+```
+
+Browse what's stored at `GET /records` (HTML).
+
 ## Quality checks
 
 ```bash
@@ -89,7 +118,7 @@ The image seeds `data/personal.csv` at build time so `/data/download` works imme
 
 ## Config
 
-No env vars. Everything is baked into `src/lib/config.ts`:
+Everything except `DATABASE_URL` is baked into `src/lib/config.ts`:
 
 | Setting          | Value                            | Purpose |
 |------------------|----------------------------------|---------|
@@ -97,3 +126,4 @@ No env vars. Everything is baked into `src/lib/config.ts`:
 | Broker id        | `4821`                           | Embedded in download CSV file names |
 | File date        | today (`YYYYMMDD`)               | Date in download file names |
 | Lists            | `?lists=` query param            | Lists in the archive (default: all six) |
+| `DATABASE_URL`   | env var (optional)               | Neon Postgres connection for persistence |

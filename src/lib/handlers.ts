@@ -10,6 +10,7 @@ import { requireApiKey } from "./auth";
 import { config } from "./config";
 import { LIST_TYPES, parseLists } from "./lists";
 import { logRequest, startTimer } from "./logger";
+import { persistUpload } from "./persist";
 import { processUpload } from "./upload";
 
 export function handleDownload(req: Request): Response {
@@ -65,12 +66,27 @@ export async function handleUpload(
 
   const form = await req.formData();
   const files = form.getAll("files").filter((f): f is File => f instanceof File);
-  const result = await processUpload(files, mode);
+  const { response, outcomes } = await processUpload(files, mode);
+
+  // Record to Postgres when DATABASE_URL is set (no-op otherwise). Persistence
+  // failure must not break the emulator's response — log and carry on.
+  const sandbox = new URL(req.url).pathname.startsWith("/sandbox");
+  let persisted = false;
+  try {
+    persisted = await persistUpload(
+      { mode, brokerId: config.dataBrokerId, sandbox },
+      outcomes,
+    );
+  } catch (e) {
+    console.error("[caldrop] persist failed:", (e as Error).message);
+  }
+
   logRequest(
     req,
     200,
     start,
-    `mode=${mode} accepted=${result.acceptedCount} rejected=${result.rejectedCount}`,
+    `mode=${mode} accepted=${response.acceptedCount} rejected=${response.rejectedCount}` +
+      (persisted ? " persisted" : ""),
   );
-  return Response.json(result);
+  return Response.json(response);
 }

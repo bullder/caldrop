@@ -10,12 +10,14 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
+    "db:init": "tsx scripts/db-init.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
     "fflate": "^0.8.2",
     "next": "^15.1.6",
     "react": "^19.0.0",
