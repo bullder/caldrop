@@ -41,6 +41,19 @@ export async function persistUpload(
   return true;
 }
 
+/**
+ * Drop all previously uploaded data: the audit log, full history, and current
+ * state. No-op without a DB. Returns true if a truncate ran.
+ */
+export async function eraseRecords(): Promise<boolean> {
+  const sql = getSql();
+  if (!sql) return false;
+  await ensureSchema(sql);
+  // upload_records cascades from uploads, but truncate all three explicitly.
+  await sql(`TRUNCATE upload_records, uploads, records RESTART IDENTITY`);
+  return true;
+}
+
 async function persistFile(
   sql: Sql,
   ctx: PersistContext,

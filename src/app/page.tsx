@@ -53,6 +53,22 @@ export default function Home() {
             <td style={cell}>no</td>
             <td style={cell}>persisted uploads + current state (HTML)</td>
           </tr>
+          <tr>
+            <td style={cell}>GET</td>
+            <td style={cell}>
+              <code>/records/{"{id}"}</code>
+            </td>
+            <td style={cell}>no</td>
+            <td style={cell}>one upload attempt + its submitted rows (HTML)</td>
+          </tr>
+          <tr>
+            <td style={cell}>GET</td>
+            <td style={cell}>
+              <a href="/erase_records">/erase_records</a>
+            </td>
+            <td style={cell}>no</td>
+            <td style={cell}>drop all persisted uploads (HTML)</td>
+          </tr>
         </tbody>
       </table>
       <p>

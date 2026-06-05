@@ -80,6 +80,10 @@ function statusCell(status: number): string {
   return `<td>${status} <span class='muted'>(${escapeHtml(label)})</span></td>`;
 }
 
+function linkCell(text: string, href: string): string {
+  return `<td><a href='${escapeHtml(href)}'>${escapeHtml(text)}</a></td>`;
+}
+
 /** Build the records view; returns HTML and an HTTP status. */
 export async function renderRecords(): Promise<{ html: string; status: number }> {
   const sql = getSql();
@@ -121,7 +125,7 @@ export async function renderRecords(): Promise<{ html: string; status: number }>
   const uploadsTable = table(
     ["#", "When", "Mode", "File", "Sandbox", "Accepted", "Rows", "Message"],
     uploads.map((u) => [
-      td(String(u.id)),
+      linkCell(String(u.id), `/records/${u.id}`),
       td(new Date(u.created_at).toISOString()),
       td(u.mode),
       td(u.file_name),
@@ -136,11 +140,92 @@ export async function renderRecords(): Promise<{ html: string; status: number }>
     status: 200,
     html: page(
       "Records",
-      "<p class='muted'>Current consumer state (upserted) and the upload audit log.</p>" +
+      "<p class='muted'>Current consumer state (upserted) and the upload audit log. " +
+        "Click an upload <code>#</code> for its detail. " +
+        "<a href='/erase_records'>Erase all records</a>.</p>" +
         "<h2>Records — current state</h2>" +
         recordsTable +
         "<h2>Uploads — audit log</h2>" +
         uploadsTable,
+    ),
+  };
+}
+
+interface UploadRecordRow {
+  consumer_id: number;
+  status: number;
+}
+
+/** Build the detail view for a single upload attempt; 404 if not found. */
+export async function renderUpload(
+  id: number,
+): Promise<{ html: string; status: number }> {
+  const sql = getSql();
+  if (!sql) {
+    return {
+      status: 200,
+      html: page(
+        `Upload #${id}`,
+        "<p class='muted'>No database configured. Set <code>DATABASE_URL</code> " +
+          "(Neon) to persist and view uploaded records.</p>",
+      ),
+    };
+  }
+
+  await ensureSchema(sql);
+
+  const found = (await sql(
+    `SELECT id, created_at, mode, file_name, sandbox, accepted, row_count, message
+     FROM uploads WHERE id = $1`,
+    [id],
+  )) as UploadRow[];
+
+  if (found.length === 0) {
+    return {
+      status: 404,
+      html: page(
+        `Upload #${id}`,
+        `<p class='no'>No upload #${id}.</p><p><a href='/records'>Back to records</a></p>`,
+      ),
+    };
+  }
+
+  const u = found[0];
+  const rows = (await sql(
+    `SELECT consumer_id, status FROM upload_records
+     WHERE upload_id = $1 ORDER BY id`,
+    [id],
+  )) as UploadRecordRow[];
+
+  const summary = table(
+    ["When", "Mode", "File", "Sandbox", "Accepted", "Rows", "Message"],
+    [
+      [
+        td(new Date(u.created_at).toISOString()),
+        td(u.mode),
+        td(u.file_name),
+        boolCell(u.sandbox),
+        boolCell(u.accepted),
+        td(String(u.row_count)),
+        td(u.message),
+      ],
+    ],
+  );
+
+  const rowsTable = table(
+    ["Consumer Id", "Status"],
+    rows.map((r) => [td(String(r.consumer_id)), statusCell(r.status)]),
+  );
+
+  return {
+    status: 200,
+    html: page(
+      `Upload #${id}`,
+      "<p><a href='/records'>&larr; Back to records</a></p>" +
+        "<h2>Upload</h2>" +
+        summary +
+        "<h2>Submitted rows</h2>" +
+        rowsTable,
     ),
   };
 }
