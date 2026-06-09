@@ -56,8 +56,8 @@ export function parseAndValidate(raw: Uint8Array): { error: string | null; rows:
     if (row.length !== 2) {
       return { error: `Row ${lineNo}: expected 2 columns (Id,Status).`, rows: [] };
     }
-    if (!isUuid(row[0])) {
-      return { error: `Row ${lineNo}: Id must be a UUID.`, rows: [] };
+    if (!isInteger(row[0])) {
+      return { error: `Row ${lineNo}: Id must be an integer.`, rows: [] };
     }
     if (!isInteger(row[1])) {
       return { error: `Row ${lineNo}: Status must be an integer.`, rows: [] };
@@ -66,14 +66,9 @@ export function parseAndValidate(raw: Uint8Array): { error: string | null; rows:
     if (!VALID_STATUS.has(status)) {
       return { error: `Row ${lineNo}: invalid status ${status} (expected 2, 3, 4, or 5).`, rows: [] };
     }
-    parsed.push({ consumerId: row[0].trim(), status });
+    parsed.push({ consumerId: parseInt(row[0], 10), status });
   }
   return { error: null, rows: parsed };
-}
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function isUuid(value: string): boolean {
-  return UUID_RE.test(value.trim());
 }
 
 function isInteger(value: string): boolean {

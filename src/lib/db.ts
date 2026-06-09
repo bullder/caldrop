@@ -45,7 +45,7 @@ export const SCHEMA_SQL = [
   `CREATE TABLE IF NOT EXISTS upload_records (
      id          BIGSERIAL PRIMARY KEY,
      upload_id   BIGINT  NOT NULL REFERENCES uploads(id) ON DELETE CASCADE,
-     consumer_id TEXT    NOT NULL,
+     consumer_id BIGINT  NOT NULL,
      status      INTEGER NOT NULL
    )`,
   `CREATE INDEX IF NOT EXISTS idx_upload_records_upload
@@ -55,7 +55,7 @@ export const SCHEMA_SQL = [
   // Current state per consumer. Keyed by (consumer_id, sandbox) so sandbox
   // submissions never collide with real ones.
   `CREATE TABLE IF NOT EXISTS records (
-     consumer_id TEXT        NOT NULL,
+     consumer_id BIGINT      NOT NULL,
      sandbox     BOOLEAN     NOT NULL DEFAULT FALSE,
      status      INTEGER     NOT NULL,
      source_file TEXT        NOT NULL,

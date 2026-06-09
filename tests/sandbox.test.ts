@@ -4,7 +4,7 @@ import { GET as sandboxDownload } from "@/app/sandbox/data/download/route";
 import { POST as sandboxAmend } from "@/app/sandbox/data/amend/route";
 import { POST as sandboxUpload } from "@/app/sandbox/data/upload/route";
 import { LIST_TYPES } from "@/lib/lists";
-import { authHeaders, csvUpload, seedId, seedTemp } from "./helpers";
+import { authHeaders, csvUpload, seedTemp } from "./helpers";
 
 beforeEach(() => {
   seedTemp();
@@ -33,7 +33,7 @@ describe("sandbox upload / amend", () => {
       new Request("http://test/sandbox/data/upload", {
         method: "POST",
         headers: authHeaders(),
-        body: csvUpload("f.csv", `Id,Status\n${seedId(0)},2\n`),
+        body: csvUpload("f.csv", "Id,Status\n1,2\n"),
       }),
     );
     const body = await r.json();
@@ -46,7 +46,7 @@ describe("sandbox upload / amend", () => {
       new Request("http://test/sandbox/data/amend", {
         method: "POST",
         headers: authHeaders(),
-        body: csvUpload("f.csv", `Id,Status\n${seedId(0)},4\n`),
+        body: csvUpload("f.csv", "Id,Status\n1,4\n"),
       }),
     );
     expect((await r.json()).mode).toBe("amend");

@@ -6,7 +6,7 @@ import { POST as upload } from "@/app/data/upload/route";
 import { config } from "@/lib/config";
 import { LIST_TYPES } from "@/lib/lists";
 import path from "node:path";
-import { authHeaders, csvUpload, seedId, seedTemp } from "./helpers";
+import { authHeaders, csvUpload, seedTemp } from "./helpers";
 
 beforeEach(() => {
   seedTemp();
@@ -93,7 +93,7 @@ describe("download", () => {
 
 describe("upload", () => {
   it("valid file accepted", async () => {
-    const r = await upload(uploadReq(csvUpload("20260312_4821_Email.csv", `Id,Status\n${seedId(0)},2\n${seedId(1)},5\n`)));
+    const r = await upload(uploadReq(csvUpload("20260312_4821_Email.csv", "Id,Status\n1,2\n2,5\n")));
     const body = await r.json();
     expect(r.status).toBe(200);
     expect(body.mode).toBe("new");
@@ -103,7 +103,7 @@ describe("upload", () => {
   });
 
   it("invalid header rejected", async () => {
-    const r = await upload(uploadReq(csvUpload("f.csv", `Id,Foo\n${seedId(0)},2\n`)));
+    const r = await upload(uploadReq(csvUpload("f.csv", "Id,Foo\n1,2\n")));
     const body = await r.json();
     expect(body.rejectedCount).toBe(1);
     expect(body.rejected[0].message).toBe("Invalid CSV header. Expected: Id,Status");
@@ -117,24 +117,24 @@ describe("upload", () => {
   });
 
   it.each([9, 1, 0])("invalid status code rejected: %d", async (badStatus) => {
-    const r = await upload(uploadReq(csvUpload("f.csv", `Id,Status\n${seedId(0)},${badStatus}\n`)));
+    const r = await upload(uploadReq(csvUpload("f.csv", `Id,Status\n1,${badStatus}\n`)));
     const body = await r.json();
     expect(body.rejectedCount).toBe(1);
     expect(body.rejected[0].message).toContain("invalid status");
   });
 
-  it("non-UUID id rejected", async () => {
+  it("non-integer id rejected", async () => {
     const r = await upload(uploadReq(csvUpload("f.csv", "Id,Status\nabc,2\n")));
-    expect((await r.json()).rejected[0].message).toContain("Id must be a UUID");
+    expect((await r.json()).rejected[0].message).toContain("Id must be an integer");
   });
 
   it("non-integer status rejected", async () => {
-    const r = await upload(uploadReq(csvUpload("f.csv", `Id,Status\n${seedId(0)},x\n`)));
+    const r = await upload(uploadReq(csvUpload("f.csv", "Id,Status\n1,x\n")));
     expect((await r.json()).rejected[0].message).toContain("Status must be an integer");
   });
 
   it("wrong column count rejected", async () => {
-    const r = await upload(uploadReq(csvUpload("f.csv", `Id,Status\n${seedId(0)},2,extra\n`)));
+    const r = await upload(uploadReq(csvUpload("f.csv", "Id,Status\n1,2,extra\n")));
     expect((await r.json()).rejected[0].message).toContain("expected 2 columns");
   });
 
@@ -151,19 +151,19 @@ describe("upload", () => {
   });
 
   it("blank data rows skipped", async () => {
-    const r = await upload(uploadReq(csvUpload("f.csv", `Id,Status\n${seedId(0)},2\n\n\n${seedId(1)},3\n`)));
+    const r = await upload(uploadReq(csvUpload("f.csv", "Id,Status\n1,2\n\n\n2,3\n")));
     expect((await r.json()).acceptedCount).toBe(1);
   });
 
   it("utf8 BOM header accepted", async () => {
-    const r = await upload(uploadReq(csvUpload("f.csv", `﻿Id,Status\n${seedId(0)},2\n`)));
+    const r = await upload(uploadReq(csvUpload("f.csv", "﻿Id,Status\n1,2\n")));
     expect((await r.json()).acceptedCount).toBe(1);
   });
 
   it("duplicate filename in one request", async () => {
     const fd = new FormData();
-    fd.append("files", new File([`Id,Status\n${seedId(0)},2\n`], "dup.csv", { type: "text/csv" }));
-    fd.append("files", new File([`Id,Status\n${seedId(1)},3\n`], "dup.csv", { type: "text/csv" }));
+    fd.append("files", new File(["Id,Status\n1,2\n"], "dup.csv", { type: "text/csv" }));
+    fd.append("files", new File(["Id,Status\n2,3\n"], "dup.csv", { type: "text/csv" }));
     const r = await upload(uploadReq(fd));
     const body = await r.json();
     expect(body.acceptedCount).toBe(1);
@@ -173,8 +173,8 @@ describe("upload", () => {
 
   it("multiple distinct files accepted", async () => {
     const fd = new FormData();
-    fd.append("files", new File([`Id,Status\n${seedId(0)},2\n`], "a.csv", { type: "text/csv" }));
-    fd.append("files", new File([`Id,Status\n${seedId(1)},3\n`], "b.csv", { type: "text/csv" }));
+    fd.append("files", new File(["Id,Status\n1,2\n"], "a.csv", { type: "text/csv" }));
+    fd.append("files", new File(["Id,Status\n2,3\n"], "b.csv", { type: "text/csv" }));
     const r = await upload(uploadReq(fd));
     expect((await r.json()).acceptedCount).toBe(2);
   });
@@ -182,7 +182,7 @@ describe("upload", () => {
 
 describe("amend", () => {
   it("mode amend and message", async () => {
-    const r = await amend(uploadReq(csvUpload("20260312_4821_Email.csv", `Id,Status\n${seedId(0)},4\n`)));
+    const r = await amend(uploadReq(csvUpload("20260312_4821_Email.csv", "Id,Status\n1,4\n")));
     const body = await r.json();
     expect(body.mode).toBe("amend");
     expect(body.accepted[0].message).toBe("Accepted. AMEND file queued for processing.");
