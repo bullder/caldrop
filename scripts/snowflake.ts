@@ -2,6 +2,9 @@
  * Generate data/snowflake.sql — CREATE TABLE + INSERT statements for 1.2×
  * the seeded personal.csv record count (5 000 base → 6 000 total).
  *
+ * 50% of rows (3 000) come from personal.csv; the other 50% (3 000) are
+ * freshly generated with distinct UUIDs — no overlap with personal.csv.
+ *
  * Run with: npm run snowflake
  */
 
@@ -13,16 +16,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { generatePersona, makeLcg, PEOPLE } from "../src/lib/seed";
 import { uuidv7Seeded } from "../src/lib/uuidv7";
 
-const BASE_COUNT = PEOPLE.personas.length; // 5 000
-const TOTAL = Math.ceil(BASE_COUNT * 1.2);  // 6 000
-const EXTRA = TOTAL - BASE_COUNT;           // 1 000
+const BASE_COUNT = PEOPLE.personas.length;      // 5 000
+const TOTAL = Math.ceil(BASE_COUNT * 1.2);       // 6 000
+const OVERLAP = Math.floor(TOTAL * 0.5);         // 3 000 — from personal.csv
+const NO_OVERLAP = TOTAL - OVERLAP;              // 3 000 — not in personal.csv
 
-// Base timestamp for extra UUIDs — starts right after the seed range.
-const EXTRA_UUID_BASE_MS = 1735689600000 + BASE_COUNT;
+// Base timestamp for non-overlapping UUIDs — well after the seed range.
+const EXTRA_UUID_BASE_MS = 1735689600000 + BASE_COUNT + 10_000;
 
 const extraPersonaRng = makeLcg(9999);
 const extraUuidRng = makeLcg(54321);
-// Separate RNG for exempt flag — consistent regardless of other generation changes.
 const exemptRng = makeLcg(7777);
 
 const EXEMPT_PROBABILITY = 0.0001; // 0.01%
@@ -68,14 +71,15 @@ const COLS = `"Id","first","last","dob","zip","email","phone","maid","vin","ctvi
 const INSERT_HEADER = `INSERT INTO FIDES_DEMO.PUBLIC.PERSONAL (${COLS})\nVALUES\n`;
 const BATCH = 1000;
 
-// Collect all rows
 const allRows: string[] = [];
 
-for (let i = 0; i < BASE_COUNT; i++) {
+// 50% overlap: first OVERLAP records from personal.csv (same UUIDs).
+for (let i = 0; i < OVERLAP; i++) {
   allRows.push(row(PEOPLE.ids[i], PEOPLE.personas[i], exemptRng() < EXEMPT_PROBABILITY));
 }
 
-for (let i = 0; i < EXTRA; i++) {
+// 50% no-overlap: freshly generated records with distinct UUIDs not in personal.csv.
+for (let i = 0; i < NO_OVERLAP; i++) {
   const p = generatePersona(BASE_COUNT + i, extraPersonaRng);
   allRows.push(row(extraId(i), p, exemptRng() < EXEMPT_PROBABILITY));
 }
@@ -91,6 +95,6 @@ const exemptCount = allRows.filter((r) => r.endsWith("TRUE)")).length;
 const outPath = path.join(__dirname, "../data/snowflake.sql");
 writeFileSync(outPath, parts.join("\n"), "utf8");
 console.log(
-  `Wrote ${outPath} (${allRows.length} records, ${exemptCount} exempt, ` +
-  `in ${Math.ceil(allRows.length / BATCH)} INSERT batches)`,
+  `Wrote ${outPath} (${allRows.length} records: ${OVERLAP} overlap + ${NO_OVERLAP} no-overlap, ` +
+  `${exemptCount} exempt, in ${Math.ceil(allRows.length / BATCH)} batches)`,
 );
