@@ -28,7 +28,7 @@ const extraPersonaRng = makeLcg(9999);
 const extraUuidRng = makeLcg(54321);
 const exemptRng = makeLcg(7777);
 
-const EXEMPT_PROBABILITY = 0.0001; // 0.01%
+const EXEMPT_PROBABILITY = 0.01; // 1%
 
 function extraId(i: number): string {
   return uuidv7Seeded(
