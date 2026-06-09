@@ -61,16 +61,21 @@ describe("streamZip", () => {
     expect(rows.map(([, h]) => h)).toEqual(expected);
   });
 
-  it("ids are unique across all files", async () => {
+  it("ids are stable per persona across all files", async () => {
     const zip = await collect();
     const unzipped = unzipSync(zip);
-    const allIds: string[] = [];
-    for (const name of Object.keys(unzipped)) {
-      const rows = parseCsv(new TextDecoder().decode(unzipped[name])).slice(1);
-      allIds.push(...rows.map((r) => r[0]));
+    // Same persona → same Id in every list file.
+    const idSets = Object.values(unzipped).map((buf) =>
+      parseCsv(new TextDecoder().decode(buf))
+        .slice(1)
+        .map((r) => r[0]),
+    );
+    // All files have the same Id column.
+    for (const ids of idSets) {
+      expect(ids).toEqual(idSets[0]);
     }
-    expect(allIds.length).toBe(LIST_TYPES.length * PEOPLE.personas.length);
-    expect(new Set(allIds).size).toBe(allIds.length);
+    // Ids are unique within a single file.
+    expect(new Set(idSets[0]).size).toBe(PEOPLE.personas.length);
   });
 
   it("deterministic across calls", async () => {

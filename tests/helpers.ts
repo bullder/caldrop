@@ -2,7 +2,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { config } from "@/lib/config";
-import { seed } from "@/lib/seed";
+import { PEOPLE, seed } from "@/lib/seed";
 
 export const API_KEY = "dev-key-123";
 
@@ -18,6 +18,11 @@ export function seedTemp(): string {
 
 export function authHeaders(key: string = API_KEY): Record<string, string> {
   return { "X-API-KEY": key };
+}
+
+/** Return the UUIDv7 for the i-th seeded persona (0-indexed). */
+export function seedId(i: number): string {
+  return PEOPLE.ids[i];
 }
 
 export function csvUpload(name: string, body: string): FormData {

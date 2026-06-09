@@ -9,18 +9,18 @@
 import { Zip, ZipDeflate } from "fflate";
 import { LIST_TYPES, type ListType } from "./lists";
 import { hashFor } from "./persona";
-import { fileName, FIRST_ID, loadPersonas } from "./seed";
+import { fileName, loadPersonas } from "./seed";
 
 // Fixed mtime so two downloads produce byte-identical archives.
 const FIXED_MTIME = new Date("1980-01-01T00:00:00Z");
+
 
 /**
  * Build a ZIP archive containing one hashed CSV per requested list
  * (defaults to all list types).
  *
- * Work-item IDs run as a single monotonic sequence across the whole archive,
- * so each list's CSV owns a disjoint ID range — IDs never collide between
- * files (and are independent of the persona row IDs).
+ * Each row's Id is the 1-based position of the persona in personal.csv,
+ * so the same record always gets the same Id across all list files and downloads.
  */
 export function streamZip(lists: ListType[] = LIST_TYPES): ReadableStream<Uint8Array> {
   const personas = loadPersonas();
@@ -28,7 +28,6 @@ export function streamZip(lists: ListType[] = LIST_TYPES): ReadableStream<Uint8A
 
   return new ReadableStream<Uint8Array>({
     start(controller) {
-      let workItemId = FIRST_ID;
       const zip = new Zip((err, chunk, final) => {
         if (err) {
           controller.error(err);
@@ -44,9 +43,9 @@ export function streamZip(lists: ListType[] = LIST_TYPES): ReadableStream<Uint8A
         entry.mtime = FIXED_MTIME;
         zip.add(entry);
         let body = "Id,Hash\n";
-        for (const persona of personas.personas) {
-          body += `${workItemId++},${hashFor(persona, listType)}\n`;
-        }
+        personas.personas.forEach((persona, i) => {
+          body += `${i + 1},${hashFor(persona, listType)}\n`;
+        });
         entry.push(encoder.encode(body), true);
       }
       zip.end();

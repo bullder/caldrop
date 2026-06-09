@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
+    "snowflake": "tsx scripts/snowflake.ts",
     "db:init": "tsx scripts/db-init.ts",
     "test": "vitest run",
     "test:watch": "vitest",

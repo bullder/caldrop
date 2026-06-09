@@ -13,8 +13,6 @@ import {
   hashPhone,
 } from "./normalize";
 
-export const DEFAULT_FIRST_ID = 679;
-
 /** One sample consumer's personal information. */
 export interface Persona {
   first: string;
@@ -64,22 +62,22 @@ export function hashFor(p: Persona, listType: ListType): string {
   }
 }
 
-/** A collection of personas with stable, sequential work-item IDs. */
+/** A collection of personas with stable UUIDv7 IDs. */
 export interface PersonaCollection {
   personas: Persona[];
-  firstId: number;
+  ids: string[];
 }
 
 export function csvFieldnames(): string[] {
   return ["Id", ...PERSONAL_FIELDS];
 }
 
-/** Yield [work-item id, persona] pairs. */
+/** Yield [id, persona] pairs. */
 export function* numbered(
   c: PersonaCollection,
-): Generator<[number, Persona]> {
-  for (let offset = 0; offset < c.personas.length; offset++) {
-    yield [c.firstId + offset, c.personas[offset]];
+): Generator<[string, Persona]> {
+  for (let i = 0; i < c.personas.length; i++) {
+    yield [c.ids[i], c.personas[i]];
   }
 }
 
@@ -96,7 +94,7 @@ export function readCsv(filePath: string): PersonaCollection {
   const text = readFileSync(filePath, "utf8");
   const rows = parseCsv(text);
   if (rows.length === 0) {
-    return { personas: [], firstId: DEFAULT_FIRST_ID };
+    return { personas: [], ids: [] };
   }
   const header = rows[0];
   const index: Record<string, number> = {};
@@ -110,7 +108,6 @@ export function readCsv(filePath: string): PersonaCollection {
     }
     return p;
   });
-  const firstId =
-    dataRows.length > 0 ? parseInt(dataRows[0][index["Id"]], 10) : DEFAULT_FIRST_ID;
-  return { personas, firstId };
+  const ids = dataRows.map((row) => row[index["Id"]] ?? "");
+  return { personas, ids };
 }

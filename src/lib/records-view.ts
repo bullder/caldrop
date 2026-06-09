@@ -21,7 +21,7 @@ const STATUS_LABEL: Record<number, string> = {
 };
 
 interface RecordRow {
-  consumer_id: number;
+  consumer_id: string;
   status: number;
   source_file: string;
   mode: string;
@@ -152,7 +152,7 @@ export async function renderRecords(): Promise<{ html: string; status: number }>
 }
 
 interface UploadRecordRow {
-  consumer_id: number;
+  consumer_id: string;
   status: number;
 }
 

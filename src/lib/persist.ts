@@ -11,7 +11,7 @@
 import { ensureSchema, getSql, type Sql } from "./db";
 
 export interface ParsedRow {
-  consumerId: number;
+  consumerId: string;
   status: number;
 }
 
@@ -73,19 +73,19 @@ async function persistFile(
   const statuses = file.rows.map((r) => r.status);
   await sql(
     `INSERT INTO upload_records (upload_id, consumer_id, status)
-     SELECT $1, c, s FROM UNNEST($2::bigint[], $3::int[]) AS t(c, s)`,
+     SELECT $1, c, s FROM UNNEST($2::text[], $3::int[]) AS t(c, s)`,
     [uploadId, ids, statuses],
   );
 
   // Current state: upsert. Dedup within the file (last status wins) so a single
   // statement never touches the same conflict target twice.
-  const latest = new Map<number, number>();
+  const latest = new Map<string, number>();
   for (const r of file.rows) latest.set(r.consumerId, r.status);
   const uids = [...latest.keys()];
   const ustatuses = uids.map((id) => latest.get(id)!);
   await sql(
     `INSERT INTO records (consumer_id, sandbox, status, source_file, mode)
-     SELECT c, $1, s, $2, $3 FROM UNNEST($4::bigint[], $5::int[]) AS t(c, s)
+     SELECT c, $1, s, $2, $3 FROM UNNEST($4::text[], $5::int[]) AS t(c, s)
      ON CONFLICT (consumer_id, sandbox)
      DO UPDATE SET status = EXCLUDED.status, source_file = EXCLUDED.source_file,
                    mode = EXCLUDED.mode, updated_at = now()`,
