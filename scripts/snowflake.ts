@@ -1,8 +1,8 @@
 /**
  * Generate data/snowflake.sql — CREATE TABLE + INSERT statements for 1.2×
- * the seeded personal.csv record count (5 000 base → 6 000 total).
+ * the seeded personal.csv record count (200 base → 240 total).
  *
- * 50% of rows (3 000) come from personal.csv; the other 50% (3 000) are
+ * 40% of rows (96) come from personal.csv; the other 60% (144) are
  * freshly generated with distinct UUIDs — no overlap with personal.csv.
  *
  * Run with: npm run snowflake
@@ -16,10 +16,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import { generatePersona, makeLcg, PEOPLE } from "../src/lib/seed";
 import { uuidv7Seeded } from "../src/lib/uuidv7";
 
-const BASE_COUNT = PEOPLE.personas.length;      // 5 000
-const TOTAL = Math.ceil(BASE_COUNT * 1.2);       // 6 000
-const OVERLAP = Math.floor(TOTAL * 0.5);         // 3 000 — from personal.csv
-const NO_OVERLAP = TOTAL - OVERLAP;              // 3 000 — not in personal.csv
+const BASE_COUNT = PEOPLE.personas.length;      // 200
+const TOTAL = Math.ceil(BASE_COUNT * 1.2);       // 240
+const NO_OVERLAP = Math.floor(TOTAL * 0.6);      // 144 — not in personal.csv
+const OVERLAP = TOTAL - NO_OVERLAP;              // 96 — from personal.csv
 
 // Base timestamp for non-overlapping UUIDs — well after the seed range.
 const EXTRA_UUID_BASE_MS = 1735689600000 + BASE_COUNT + 10_000;
@@ -73,12 +73,12 @@ const BATCH = 1000;
 
 const allRows: string[] = [];
 
-// 50% overlap: first OVERLAP records from personal.csv (same UUIDs).
+// 40% overlap: first OVERLAP records from personal.csv (same UUIDs).
 for (let i = 0; i < OVERLAP; i++) {
   allRows.push(row(PEOPLE.ids[i], PEOPLE.personas[i], exemptRng() < EXEMPT_PROBABILITY));
 }
 
-// 50% no-overlap: freshly generated records with distinct UUIDs not in personal.csv.
+// 60% no-overlap: freshly generated records with distinct UUIDs not in personal.csv.
 for (let i = 0; i < NO_OVERLAP; i++) {
   const p = generatePersona(BASE_COUNT + i, extraPersonaRng);
   allRows.push(row(extraId(i), p, exemptRng() < EXEMPT_PROBABILITY));

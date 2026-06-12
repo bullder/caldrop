@@ -194,7 +194,7 @@ export function generatePersona(i: number, rng: () => number): Persona {
   return persona(first, last, dob, zip, email, phone, maid, vin, ctvid);
 }
 
-const TARGET_COUNT = 50;
+const TARGET_COUNT = 200;
 
 // Base timestamp for seeded UUIDs: 2025-01-01T00:00:00.000Z
 const ID_BASE_MS = 1735689600000;
