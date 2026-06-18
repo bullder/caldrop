@@ -70,21 +70,28 @@ describe("streamZip", () => {
     expect(realHashes.has(missing[1])).toBe(false);
   });
 
-  it("ids are stable per persona across all files", async () => {
+  it("each list matches a different identity; missing row is shared", async () => {
     const zip = await collect();
     const unzipped = unzipSync(zip);
-    // Same persona → same Id in every list file.
-    const idSets = Object.values(unzipped).map((buf) =>
-      parseCsv(new TextDecoder().decode(buf))
-        .slice(1)
-        .map((r) => r[0]),
+    const rowSets = Object.values(unzipped).map((buf) =>
+      parseCsv(new TextDecoder().decode(buf)).slice(1),
     );
-    // All files have the same Id column.
-    for (const ids of idSets) {
-      expect(ids).toEqual(idSets[0]);
+
+    // Two rows per file, unique Ids within a file (one match + one missing).
+    for (const rows of rowSets) {
+      expect(rows.length).toBe(2);
+      expect(new Set(rows.map((r) => r[0])).size).toBe(2);
     }
-    // Ids are unique within a single file (one match + one missing).
-    expect(new Set(idSets[0]).size).toBe(2);
+
+    // The matching identity (row 0) differs across lists.
+    const matchIds = rowSets.map((rows) => rows[0][0]);
+    expect(new Set(matchIds).size).toBe(matchIds.length);
+
+    // The missing record (row 1) is the same Id in every list file.
+    const missingIds = rowSets.map((rows) => rows[1][0]);
+    for (const id of missingIds) {
+      expect(id).toBe(missingIds[0]);
+    }
   });
 
   it("deterministic across calls", async () => {
