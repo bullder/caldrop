@@ -47,18 +47,27 @@ describe("streamZip", () => {
     expect(names).toEqual(["20260312_4821_Email.csv", "20260312_4821_Phone.csv"]);
   });
 
-  it("csv header and row count", async () => {
+  it("csv header and row count (one match + one missing)", async () => {
     const zip = await collect();
     const rows = parseCsv(readEntry(zip, "20260312_4821_Phone.csv"));
     expect(rows[0]).toEqual(["Id", "Hash"]);
-    expect(rows.length).toBe(1 + PEOPLE.personas.length);
+    expect(rows.length).toBe(1 + 2);
   });
 
-  it("hashes match normalize", async () => {
+  it("matching row hashes a real persona; missing row does not", async () => {
     const zip = await collect();
-    const rows = parseCsv(readEntry(zip, "20260312_4821_Email.csv")).slice(1);
-    const expected = PEOPLE.personas.map((p) => normalize.hashEmail(p.email));
-    expect(rows.map(([, h]) => h)).toEqual(expected);
+    const [match, missing] = parseCsv(readEntry(zip, "20260312_4821_Email.csv")).slice(1);
+
+    // Match: Id is a real 1-based position; hash matches that persona.
+    const matchId = Number(match[0]);
+    expect(matchId).toBeGreaterThanOrEqual(1);
+    expect(matchId).toBeLessThanOrEqual(PEOPLE.personas.length);
+    expect(match[1]).toBe(normalize.hashEmail(PEOPLE.personas[matchId - 1].email));
+
+    // Missing: Id is beyond the dataset and its hash is not a real persona's.
+    expect(Number(missing[0])).toBe(PEOPLE.personas.length + 1);
+    const realHashes = new Set(PEOPLE.personas.map((p) => normalize.hashEmail(p.email)));
+    expect(realHashes.has(missing[1])).toBe(false);
   });
 
   it("ids are stable per persona across all files", async () => {
@@ -74,8 +83,8 @@ describe("streamZip", () => {
     for (const ids of idSets) {
       expect(ids).toEqual(idSets[0]);
     }
-    // Ids are unique within a single file.
-    expect(new Set(idSets[0]).size).toBe(PEOPLE.personas.length);
+    // Ids are unique within a single file (one match + one missing).
+    expect(new Set(idSets[0]).size).toBe(2);
   });
 
   it("deterministic across calls", async () => {

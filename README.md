@@ -52,10 +52,12 @@ email, phone, MAID, VIN, CTVID). Seeding writes only the raw records to
 `data/personal.csv` — the source of truth, never served directly.
 
 On each `GET /data/download`, `src/lib/archive.ts` reads `personal.csv`,
-hashes each identifier per the spec canonicalization + SHA-256/Base64 rules
+hashes identifiers per the spec canonicalization + SHA-256/Base64 rules
 (concatenated hashing for NDZ and NVIN), and **streams** a ZIP with one CSV
 per enabled list — entries carry a fixed timestamp so two downloads are
-byte-identical.
+byte-identical. Each list CSV is limited to two rows: one record that matches
+`personal.csv` (a real persona) and one synthetic record absent from the
+dataset (Id beyond the seeded range).
 
 Re-run `npm run seed` after editing `PEOPLE` or `.env`.
 

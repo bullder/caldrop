@@ -9,22 +9,41 @@
 import { Zip, ZipDeflate } from "fflate";
 import { LIST_TYPES, type ListType } from "./lists";
 import { hashFor } from "./persona";
-import { fileName, loadPersonas } from "./seed";
+import { fileName, generatePersona, loadPersonas, makeLcg } from "./seed";
 
 // Fixed mtime so two downloads produce byte-identical archives.
 const FIXED_MTIME = new Date("1980-01-01T00:00:00Z");
+
+// Deterministic seeds: a stable pick of the matching persona and a fixed
+// synthetic persona, so downloads stay byte-identical across calls.
+const PICK_SEED = 2026;
+const SYNTHETIC_SEED = 424242;
 
 
 /**
  * Build a ZIP archive containing one hashed CSV per requested list
  * (defaults to all list types).
  *
- * Each row's Id is the 1-based position of the persona in personal.csv,
- * so the same record always gets the same Id across all list files and downloads.
+ * Each list CSV is limited to two rows: one record that matches personal.csv
+ * (a real persona) and one synthetic record absent from the dataset (Id beyond
+ * the seeded range). The matching row's Id is the persona's 1-based position in
+ * personal.csv, so the same record keeps the same Id across all list files and
+ * downloads.
  */
 export function streamZip(lists: ListType[] = LIST_TYPES): ReadableStream<Uint8Array> {
   const personas = loadPersonas();
   const encoder = new TextEncoder();
+
+  // One matching record: a deterministically-picked persona from personal.csv.
+  const count = personas.personas.length;
+  const matchIdx = Math.floor(makeLcg(PICK_SEED)() * count);
+  const matchPersona = personas.personas[matchIdx];
+  const matchId = matchIdx + 1; // 1-based position in personal.csv
+
+  // One missing record: a synthetic persona not present in personal.csv,
+  // with an Id beyond the seeded range.
+  const missingPersona = generatePersona(count, makeLcg(SYNTHETIC_SEED));
+  const missingId = count + 1;
 
   return new ReadableStream<Uint8Array>({
     start(controller) {
@@ -43,9 +62,8 @@ export function streamZip(lists: ListType[] = LIST_TYPES): ReadableStream<Uint8A
         entry.mtime = FIXED_MTIME;
         zip.add(entry);
         let body = "Id,Hash\n";
-        personas.personas.forEach((persona, i) => {
-          body += `${i + 1},${hashFor(persona, listType)}\n`;
-        });
+        body += `${matchId},${hashFor(matchPersona, listType)}\n`;
+        body += `${missingId},${hashFor(missingPersona, listType)}\n`;
         entry.push(encoder.encode(body), true);
       }
       zip.end();
