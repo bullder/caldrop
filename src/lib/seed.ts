@@ -67,79 +67,18 @@ const HAND_CRAFTED: Persona[] = [
 // Bulk generator — deterministic LCG so the CSV is reproducible.
 // ---------------------------------------------------------------------------
 
-const FIRST_NAMES = [
-  "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
-  "William", "Barbara", "David", "Elizabeth", "Richard", "Susan", "Joseph", "Jessica",
-  "Thomas", "Sarah", "Charles", "Karen", "Christopher", "Lisa", "Daniel", "Nancy",
-  "Matthew", "Betty", "Anthony", "Margaret", "Mark", "Sandra", "Donald", "Ashley",
-  "Steven", "Dorothy", "Paul", "Kimberly", "Andrew", "Emily", "Joshua", "Donna",
-  "Kenneth", "Michelle", "Kevin", "Carol", "Brian", "Amanda", "George", "Melissa",
-  "Timothy", "Deborah", "Ronald", "Stephanie", "Edward", "Rebecca", "Jason", "Sharon",
-  "Jeffrey", "Laura", "Ryan", "Cynthia", "Jacob", "Kathleen", "Gary", "Amy",
-  "Nicholas", "Angela", "Eric", "Shirley", "Jonathan", "Anna", "Stephen", "Brenda",
-  "Larry", "Pamela", "Justin", "Emma", "Scott", "Nicole", "Brandon", "Helen",
-  "Frank", "Samantha", "Raymond", "Katherine", "Gregory", "Christine", "Samuel", "Debra",
-  "Patrick", "Rachel", "Alexander", "Carolyn", "Jack", "Janet", "Dennis", "Catherine",
-  "Jerry", "Maria", "Tyler", "Heather", "Aaron", "Diane", "Jose", "Julie",
-  "Henry", "Joyce", "Adam", "Victoria", "Douglas", "Kelly", "Nathan", "Christina",
-];
+// Generation style ported from drop_seed_warehouse.ipynb (IdentityGen): small
+// name pools with Unicode/apostrophe/suffix variants, four messy DOB formats,
+// an example-domain email pattern with a shared/junk pool, raw 10-digit phones,
+// and lowercase-UUID MAIDs. The flat one-row-per-persona schema and VIN/NVIN are
+// kept (no notebook equivalent), so the upload/download contract is unchanged.
+const FIRST_NAMES = ["James", "Mary", "Anne Marie", "José", "Quang", "Sophia", "Liam", "Ava"];
+const LAST_NAMES = ["Smith", "Garcia", "Trần", "Smith Jr", "Harris", "O'Brien", "Johnson", "Parker"];
 
-const LAST_NAMES = [
-  "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis",
-  "Rodriguez", "Martinez", "Hernandez", "Lopez", "Gonzalez", "Wilson", "Anderson", "Thomas",
-  "Taylor", "Moore", "Jackson", "Martin", "Lee", "Perez", "Thompson", "White",
-  "Harris", "Sanchez", "Clark", "Ramirez", "Lewis", "Robinson", "Walker", "Young",
-  "Allen", "King", "Wright", "Scott", "Torres", "Nguyen", "Hill", "Flores",
-  "Green", "Adams", "Nelson", "Baker", "Hall", "Rivera", "Campbell", "Mitchell",
-  "Carter", "Roberts", "Gomez", "Phillips", "Evans", "Turner", "Diaz", "Parker",
-  "Cruz", "Edwards", "Collins", "Reyes", "Stewart", "Morris", "Morales", "Murphy",
-  "Cook", "Rogers", "Gutierrez", "Ortiz", "Morgan", "Cooper", "Peterson", "Bailey",
-  "Reed", "Kelly", "Howard", "Ramos", "Kim", "Cox", "Ward", "Richardson",
-  "Watson", "Brooks", "Chavez", "Wood", "James", "Bennett", "Gray", "Mendoza",
-  "Ruiz", "Hughes", "Price", "Alvarez", "Castillo", "Sanders", "Patel", "Myers",
-  "Long", "Ross", "Foster", "Jimenez", "Powell", "Jenkins", "Perry", "Russell",
-  "Sullivan", "Bell", "Coleman", "Butler", "Henderson", "Barnes", "Gonzales", "Fisher",
-  "Vasquez", "Simmons", "Romero", "Jordan", "Patterson", "Hamilton", "Graham", "Reynolds",
-];
-
-const ZIPS = [
-  "10001", "10002", "10011", "10019", "10022", "10036",
-  "90001", "90210", "90211", "90245", "90266",
-  "60601", "60602", "60603", "60606", "60614",
-  "77001", "77002", "77004", "77006", "77019",
-  "85001", "85002", "85004", "85006", "85016",
-  "19101", "19102", "19103", "19104",
-  "30301", "30303", "30305", "30306", "30309",
-  "98101", "98102", "98103", "98104", "98121",
-  "02101", "02103", "02115", "02116", "02134",
-  "94101", "94102", "94103", "94105", "94107",
-  "33101", "33109", "33125", "33130", "33132",
-  "75201", "75202", "75203", "75204", "75205",
-  "48201", "48202", "48203", "48204",
-  "55401", "55402", "55403", "55405",
-  "89101", "89102", "89103", "89109",
-  "37201", "37203", "37204", "37205",
-  "63101", "63103", "63104", "63105",
-  "80201", "80202", "80203", "80205",
-  "45201", "45202", "45203", "45204",
-  "15201", "15203", "15205", "15206",
-  "07097", "07302", "07306", "07030",
-  "11201", "11205", "11211", "11215",
-  "02139", "02140", "02141", "02142",
-  "96813", "96814", "96815", "96816",
-];
-
-const AREA_CODES = [
-  "212", "213", "214", "215", "216", "305", "310", "312", "313", "323",
-  "404", "415", "425", "503", "510", "617", "650", "702", "713", "718",
-  "773", "805", "808", "818", "832", "916", "917", "925", "949", "954",
-  "972", "201", "202", "203", "206", "207", "209", "210", "217", "218",
-];
-
-const DOMAINS = [
-  "gmail.com", "yahoo.com", "hotmail.com", "outlook.com", "icloud.com",
-  "aol.com", "protonmail.com", "me.com", "live.com", "msn.com",
-];
+// Shared-email pool (~0.5%) collides across personas to trip the household
+// guard; junk pool (~0.2%) is the noise the pipeline must filter.
+const SHARED_EMAILS = ["family@shared.com", "info@shared.com", "household@shared.com"];
+const JUNK_EMAILS = ["test@test.com", "noreply@example.com"];
 
 // Valid VIN chars — spec excludes I, O, Q.
 const VIN_CHARS = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789";
@@ -156,34 +95,59 @@ function padHex(n: number, len: number): string {
   return n.toString(16).padStart(len, "0").toUpperCase();
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+// 32 lowercase hex digits formatted 8-4-4-4-12, mirroring the notebook's
+// str(uuid.UUID(int=rng.getrandbits(128))).lower().
+function uuidLike(rng: () => number): string {
+  let hex = "";
+  for (let j = 0; j < 32; j++) hex += Math.floor(rng() * 16).toString(16);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 export function generatePersona(i: number, rng: () => number): Persona {
   const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
 
   const first = pick(FIRST_NAMES);
   const last = pick(LAST_NAMES);
 
-  const year = 1940 + Math.floor(rng() * 65);
+  // Notebook PII zip: zero-padded 5-digit numeric (1..99950).
+  const zip = String(1 + Math.floor(rng() * 99950)).padStart(5, "0");
+
+  // Notebook _dob: 1925..2010 in one of four formats so the digit order varies.
+  const year = 1925 + Math.floor(rng() * 86);
   const month = 1 + Math.floor(rng() * 12);
   const day = 1 + Math.floor(rng() * 28);
-  const dob = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  const dobFmt = 1 + Math.floor(rng() * 4);
+  const dob =
+    dobFmt === 1 ? `${year}${pad2(month)}${pad2(day)}`        // YYYYMMDD
+    : dobFmt === 2 ? `${pad2(month)}/${pad2(day)}/${year}`     // MM/DD/YYYY
+    : dobFmt === 3 ? `${pad2(day)}-${pad2(month)}-${year}`     // DD-MM-YYYY
+    : `${year}-${pad2(month)}-${pad2(day)}`;                   // ISO
 
-  const zip = pick(ZIPS);
-  const domain = pick(DOMAINS);
-  const email = `${first.toLowerCase()}.${last.toLowerCase()}${i}@${domain}`;
+  // Notebook _email: ~0.5% shared, ~0.2% junk, else user<aa>_<n>@example<d>.com.
+  const r = Math.floor(rng() * 1000);
+  const email =
+    r < 5 ? pick(SHARED_EMAILS)
+    : r < 7 ? pick(JUNK_EMAILS)
+    : `user${i}_0@example${1 + Math.floor(rng() * 9)}.com`;
 
-  const areaCode = pick(AREA_CODES);
-  const line4 = String(i % 10000).padStart(4, "0");
-  const phone = `+1 (${areaCode}) 555-${line4}`;
+  // Notebook PHONE: raw 10-digit string, no formatting.
+  const phone = String(2000000000 + Math.floor(rng() * 8000000000));
 
-  // Embed i for guaranteed uniqueness.
-  const maid = `${padHex(i, 8)}-${padHex(Math.floor(rng() * 0x10000), 4)}-${padHex(Math.floor(rng() * 0x10000), 4)}`;
+  // Notebook MAID: lowercase UUID.
+  const maid = uuidLike(rng);
 
+  // VIN (no notebook source) — embed i for guaranteed uniqueness.
   let vinPrefix = "";
   for (let j = 0; j < 12; j++) {
     vinPrefix += VIN_CHARS[Math.floor(rng() * VIN_CHARS.length)];
   }
   const vin = vinPrefix + String(i).padStart(5, "0");
 
+  // CTVID (no notebook per-person source) — cycle the messy formats, embed i.
   const ctvFormats = [
     `ctv_${padHex(i, 4).toLowerCase()}_${String(1000 + Math.floor(rng() * 9000))}`,
     `CTV-${String(i).padStart(6, "0")}-${String.fromCharCode(65 + Math.floor(rng() * 26))}${String.fromCharCode(65 + Math.floor(rng() * 26))}`,
