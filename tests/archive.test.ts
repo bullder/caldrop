@@ -1,6 +1,6 @@
 import { unzipSync } from "fflate";
 import { beforeEach, describe, expect, it } from "vitest";
-import { streamZip } from "@/lib/archive";
+import { type DownloadOpts, streamZip } from "@/lib/archive";
 import { LIST_TYPES, ListType } from "@/lib/lists";
 import * as normalize from "@/lib/normalize";
 import { PEOPLE } from "@/lib/seed";
@@ -11,9 +11,9 @@ beforeEach(() => {
   seedTemp();
 });
 
-async function collect(lists?: ListType[]): Promise<Uint8Array> {
+async function collect(lists?: ListType[], opts?: DownloadOpts): Promise<Uint8Array> {
   const chunks: Uint8Array[] = [];
-  const reader = streamZip(lists).getReader();
+  const reader = streamZip(lists, opts).getReader();
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -47,51 +47,40 @@ describe("streamZip", () => {
     expect(names).toEqual(["20260312_4821_Email.csv", "20260312_4821_Phone.csv"]);
   });
 
-  it("csv header and row count (one match + one missing)", async () => {
+  it("csv header and row count (every persona + one missing)", async () => {
     const zip = await collect();
     const rows = parseCsv(readEntry(zip, "20260312_4821_Phone.csv"));
     expect(rows[0]).toEqual(["Id", "Hash"]);
-    expect(rows.length).toBe(1 + 2);
+    expect(rows.length).toBe(1 + PEOPLE.personas.length + 1);
   });
 
-  it("matching row hashes a real persona; missing row does not", async () => {
+  it("matching rows hash every real persona; missing row does not", async () => {
     const zip = await collect();
-    const [match, missing] = parseCsv(readEntry(zip, "20260312_4821_Email.csv")).slice(1);
+    const rows = parseCsv(readEntry(zip, "20260312_4821_Email.csv")).slice(1);
+    const count = PEOPLE.personas.length;
 
-    // Match: Id is a real 1-based position; hash matches that persona.
-    const matchId = Number(match[0]);
-    expect(matchId).toBeGreaterThanOrEqual(1);
-    expect(matchId).toBeLessThanOrEqual(PEOPLE.personas.length);
-    expect(match[1]).toBe(normalize.hashEmail(PEOPLE.personas[matchId - 1].email));
+    // One matching row per persona, in order: Id is the 1-based position and
+    // the hash matches that persona.
+    for (let idx = 0; idx < count; idx++) {
+      expect(Number(rows[idx][0])).toBe(idx + 1);
+      expect(rows[idx][1]).toBe(normalize.hashEmail(PEOPLE.personas[idx].email));
+    }
 
-    // Missing: Id is beyond the dataset and its hash is not a real persona's.
-    expect(Number(missing[0])).toBe(PEOPLE.personas.length + 1);
+    // Trailing missing row: Id is beyond the dataset; hash is not a real one.
+    const missing = rows[count];
+    expect(Number(missing[0])).toBe(count + 1);
     const realHashes = new Set(PEOPLE.personas.map((p) => normalize.hashEmail(p.email)));
     expect(realHashes.has(missing[1])).toBe(false);
   });
 
-  it("each list matches a different identity; missing row is shared", async () => {
-    const zip = await collect();
-    const unzipped = unzipSync(zip);
-    const rowSets = Object.values(unzipped).map((buf) =>
-      parseCsv(new TextDecoder().decode(buf)).slice(1),
-    );
-
-    // Two rows per file, unique Ids within a file (one match + one missing).
-    for (const rows of rowSets) {
-      expect(rows.length).toBe(2);
-      expect(new Set(rows.map((r) => r[0])).size).toBe(2);
-    }
-
-    // The matching identity (row 0) differs across lists.
-    const matchIds = rowSets.map((rows) => rows[0][0]);
-    expect(new Set(matchIds).size).toBe(matchIds.length);
-
-    // The missing record (row 1) is the same Id in every list file.
-    const missingIds = rowSets.map((rows) => rows[1][0]);
-    for (const id of missingIds) {
-      expect(id).toBe(missingIds[0]);
-    }
+  it("?limit caps matching rows; ?missing sets synthetic count", async () => {
+    const zip = await collect(undefined, { limit: 3, missing: 2 });
+    const rows = parseCsv(readEntry(zip, "20260312_4821_Email.csv")).slice(1);
+    expect(rows.length).toBe(3 + 2);
+    expect(rows.slice(0, 3).map((r) => Number(r[0]))).toEqual([1, 2, 3]);
+    // Missing rows carry Ids just past the seeded range.
+    const missingIds = rows.slice(3).map((r) => Number(r[0]));
+    expect(missingIds).toEqual([PEOPLE.personas.length + 1, PEOPLE.personas.length + 2]);
   });
 
   it("deterministic across calls", async () => {

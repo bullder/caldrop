@@ -5,13 +5,23 @@
  */
 
 import { existsSync } from "node:fs";
-import { streamZip } from "./archive";
+import { type DownloadOpts, streamZip } from "./archive";
 import { requireApiKey } from "./auth";
 import { config } from "./config";
 import { LIST_TYPES, parseLists } from "./lists";
 import { logRequest, startTimer } from "./logger";
 import { persistUpload } from "./persist";
 import { processUpload } from "./upload";
+
+/** Parse a non-negative integer query param; undefined when absent. */
+function parseCount(raw: string | null, name: string): number | undefined {
+  if (raw === null) return undefined;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0) {
+    throw new Error(`Invalid '${name}': expected a non-negative integer, got '${raw}'`);
+  }
+  return n;
+}
 
 export function handleDownload(req: Request): Response {
   const start = startTimer();
@@ -23,8 +33,9 @@ export function handleDownload(req: Request): Response {
   }
 
   // Optional ?lists=NDZ,EMAIL,... selects which CSVs to include (default: all).
-  const raw = new URL(req.url).searchParams.get("lists");
+  const params = new URL(req.url).searchParams;
   let lists = LIST_TYPES;
+  const raw = params.get("lists");
   if (raw !== null) {
     try {
       lists = parseLists(raw);
@@ -32,6 +43,18 @@ export function handleDownload(req: Request): Response {
       logRequest(req, 400, start);
       return Response.json({ detail: (e as Error).message }, { status: 400 });
     }
+  }
+
+  // Optional ?limit= caps matching rows per list; ?missing= sets synthetic rows.
+  let opts: DownloadOpts;
+  try {
+    opts = {
+      limit: parseCount(params.get("limit"), "limit"),
+      missing: parseCount(params.get("missing"), "missing"),
+    };
+  } catch (e) {
+    logRequest(req, 400, start);
+    return Response.json({ detail: (e as Error).message }, { status: 400 });
   }
 
   if (!existsSync(config.personalCsv)) {
@@ -44,7 +67,7 @@ export function handleDownload(req: Request): Response {
 
   // Hash and stream the archive on the fly — no prebuilt file.
   logRequest(req, 200, start, `lists=${lists.length}`);
-  return new Response(streamZip(lists), {
+  return new Response(streamZip(lists, opts), {
     headers: {
       "content-type": "application/zip",
       "content-disposition": 'attachment; filename="download.zip"',
