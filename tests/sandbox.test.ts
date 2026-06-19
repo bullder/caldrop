@@ -21,9 +21,13 @@ describe("sandbox download", () => {
     expect(names).toContain("20260312_4821_Email.csv");
   });
 
-  it("still enforces auth", async () => {
-    const r = await sandboxDownload(new Request("http://test/sandbox/data/download"));
-    expect(r.status).toBe(401);
+  it("accepts a missing key (empty is valid), rejects an invalid one", async () => {
+    const ok = await sandboxDownload(new Request("http://test/sandbox/data/download"));
+    expect(ok.status).toBe(200);
+    const bad = await sandboxDownload(
+      new Request("http://test/sandbox/data/download", { headers: { "X-API-KEY": "wrong" } }),
+    );
+    expect(bad.status).toBe(401);
   });
 });
 

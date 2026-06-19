@@ -24,9 +24,14 @@ function downloadReq(
 }
 
 describe("auth", () => {
-  it("missing key -> 401", async () => {
+  it("missing key -> accepted (empty is valid)", async () => {
     const r = await download(new Request("http://test/data/download"));
-    expect(r.status).toBe(401);
+    expect(r.status).toBe(200);
+  });
+
+  it("empty key -> accepted (empty is valid)", async () => {
+    const r = await download(downloadReq({ "X-API-KEY": "" }));
+    expect(r.status).toBe(200);
   });
 
   it("invalid key -> 401", async () => {
@@ -42,11 +47,11 @@ describe("auth", () => {
     }
   });
 
-  it("upload also requires a key", async () => {
+  it("upload accepts a missing key too", async () => {
     const r = await upload(
       new Request("http://test/data/upload", { method: "POST", body: csvUpload("f.csv", "Id,Status\n1,2\n") }),
     );
-    expect(r.status).toBe(401);
+    expect(r.status).toBe(200);
   });
 });
 
