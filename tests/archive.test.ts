@@ -39,6 +39,8 @@ describe("streamZip", () => {
     const names = Object.keys(unzipSync(zip));
     expect(names.length).toBe(LIST_TYPES.length);
     expect(names).toContain("20260312_4821_Email.csv");
+    expect(names).toContain("20260312_4821_NameVIN.csv");
+    expect(names).not.toContain("20260312_4821_NVIN.csv");
   });
 
   it("honors a list subset", async () => {

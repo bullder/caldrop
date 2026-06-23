@@ -6,6 +6,7 @@ describe("lists", () => {
     expect(fileLabel(ListType.EMAIL)).toBe("Email");
     expect(fileLabel(ListType.NDZ)).toBe("NDZ");
     expect(fileLabel(ListType.PHONE)).toBe("Phone");
+    expect(fileLabel(ListType.NVIN)).toBe("NameVIN");
   });
 
   it("has all six list types in spec order", () => {

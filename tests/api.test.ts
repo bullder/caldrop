@@ -67,6 +67,8 @@ describe("download", () => {
     const r = await download(downloadReq());
     const names = Object.keys(unzipSync(new Uint8Array(await r.arrayBuffer())));
     expect(names).toContain("20260312_4821_Email.csv");
+    expect(names).toContain("20260312_4821_NameVIN.csv");
+    expect(names).not.toContain("20260312_4821_NVIN.csv");
     expect(names.length).toBe(LIST_TYPES.length);
   });
 

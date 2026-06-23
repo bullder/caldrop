@@ -19,13 +19,13 @@ export const LIST_TYPES: ListType[] = [
   ListType.CTVID,
 ];
 
-// File-name casing per the spec examples (NDZ.csv, Email.csv, Phone.csv...).
+// File-name labels per the spec examples (NDZ.csv, Email.csv, NameVIN.csv...).
 const FILE_LABEL: Record<ListType, string> = {
   [ListType.NDZ]: "NDZ",
   [ListType.EMAIL]: "Email",
   [ListType.PHONE]: "Phone",
   [ListType.MAID]: "MAID",
-  [ListType.NVIN]: "NVIN",
+  [ListType.NVIN]: "NameVIN",
   [ListType.CTVID]: "CTVID",
 };
 
