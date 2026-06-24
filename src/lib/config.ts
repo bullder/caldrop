@@ -21,8 +21,6 @@ const BASE_DIR = process.cwd();
 const DATA_DIR = path.join(BASE_DIR, "data");
 
 export interface Config {
-  /** Valid API keys for X-API-KEY auth. */
-  apiKeys: Set<string>;
   /** Embedded in CSV file names: <YYYYMMDD>_<DataBrokerId>_<DataType>.csv */
   dataBrokerId: string;
   /** Defaults to today (YYYYMMDD); tests pin it for deterministic file names. */
@@ -32,7 +30,6 @@ export interface Config {
 }
 
 export const config: Config = {
-  apiKeys: new Set(["dev-key-123", "broker-4821-key"]),
   dataBrokerId: "4821",
   fileDate: todayYyyymmdd(),
   dataDir: DATA_DIR,

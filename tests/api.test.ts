@@ -34,14 +34,14 @@ describe("auth", () => {
     expect(r.status).toBe(200);
   });
 
-  it("invalid key -> 401", async () => {
-    const r = await download(downloadReq({ "X-API-KEY": "wrong" }));
+  it("INVALID-KEY -> 401", async () => {
+    const r = await download(downloadReq({ "X-API-KEY": "INVALID-KEY" }));
     expect(r.status).toBe(401);
     expect((await r.json()).detail).toContain("missing or invalid");
   });
 
-  it("both configured keys work", async () => {
-    for (const key of ["dev-key-123", "broker-4821-key"]) {
+  it("any other key -> accepted", async () => {
+    for (const key of ["dev-key-123", "broker-4821-key", "random-key", "wrong"]) {
       const r = await download(downloadReq({ "X-API-KEY": key }));
       expect(r.status).toBe(200);
     }
