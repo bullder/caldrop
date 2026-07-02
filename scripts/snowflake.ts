@@ -13,10 +13,14 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-import { generatePersona, makeLcg, PEOPLE } from "../src/lib/seed";
+import { buildPeople, generatePersona, makeLcg } from "../src/lib/seed";
 import { uuidv7Seeded } from "../src/lib/uuidv7";
 
-const BASE_COUNT = PEOPLE.personas.length;      // 200
+// Warehouse sample sized to a modest base (independent of the large download
+// dataset). The first BASE_COUNT personas are a deterministic prefix of
+// personal.csv, so the overlap rows still reference real seeded UUIDs.
+const BASE_COUNT = 200;
+const PEOPLE = buildPeople(BASE_COUNT);
 const TOTAL = Math.ceil(BASE_COUNT * 1.2);       // 240
 const NO_OVERLAP = Math.floor(TOTAL * 0.6);      // 144 — not in personal.csv
 const OVERLAP = TOTAL - NO_OVERLAP;              // 96 — from personal.csv

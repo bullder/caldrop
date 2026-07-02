@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
  * person's raw fields alongside the derived hash for all six list types,
  * so you can eyeball what the download endpoint produces.
  */
-export function GET(): Response {
+export async function GET(): Promise<Response> {
   if (!existsSync(config.personalCsv)) {
     return Response.json(
       { detail: "Sample data not seeded. Run: npm run seed" },
       { status: 500 },
     );
   }
-  return new Response(renderPreview(), {
+  return new Response(await renderPreview(), {
     headers: { "content-type": "text/html; charset=utf-8" },
   });
 }

@@ -6,8 +6,11 @@ import { config } from "@/lib/config";
 import { ListType } from "@/lib/lists";
 import * as normalize from "@/lib/normalize";
 import { csvFieldnames } from "@/lib/persona";
-import { PEOPLE } from "@/lib/seed";
-import { seedTemp } from "./helpers";
+import { buildPeople } from "@/lib/seed";
+import { SEED_COUNT, seedTemp } from "./helpers";
+
+// Deterministic reference for what seedTemp() wrote (same count, same RNG).
+const PEOPLE = buildPeople(SEED_COUNT);
 
 let dir: string;
 beforeEach(() => {

@@ -5,9 +5,12 @@
  * so seeding only writes that one source file — no prebuilt archive.
  */
 
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { config } from "./config";
-import { fileLabel, ListType } from "./lists";
+import { fileLabel, LIST_TYPES, ListType } from "./lists";
 import {
+  hashFor,
   type Persona,
   type PersonaCollection,
   readCsv,
@@ -163,10 +166,10 @@ const TARGET_COUNT = 300000;
 // Base timestamp for seeded UUIDs: 2025-01-01T00:00:00.000Z
 const ID_BASE_MS = 1735689600000;
 
-function buildCollection(): PersonaCollection {
+function buildCollection(count: number = TARGET_COUNT): PersonaCollection {
   const personaRng = makeLcg(42);
   const personas: Persona[] = [...HAND_CRAFTED];
-  for (let i = 0; i < TARGET_COUNT - HAND_CRAFTED.length; i++) {
+  for (let i = 0; i < count - HAND_CRAFTED.length; i++) {
     personas.push(generatePersona(i, personaRng));
   }
 
@@ -183,8 +186,13 @@ function buildCollection(): PersonaCollection {
   return { personas, ids };
 }
 
-// Sample consumers with personal information used to derive the hashed lists.
-export const PEOPLE: PersonaCollection = buildCollection();
+// Build the sample-consumer collection on demand. Deliberately NOT a
+// module-level constant: at 300k personas that would run buildCollection()
+// (and hold ~150MB) on every serverless cold start of any route that imports
+// this file, even though the runtime download/preview paths read from disk.
+export function buildPeople(count: number = TARGET_COUNT): PersonaCollection {
+  return buildCollection(count);
+}
 
 // Status codes the upload endpoints accept (spec StatusCode enum).
 export const VALID_STATUS = new Set([2, 3, 4, 5]);
@@ -193,11 +201,61 @@ export function fileName(listType: ListType): string {
   return `${config.fileDate}_${config.dataBrokerId}_${fileLabel(listType)}.csv`;
 }
 
+/** Directory holding the prerendered per-list hashed CSVs. */
+export function listsDir(): string {
+  return path.join(config.dataDir, "lists");
+}
+
+/** Prerendered hashed-CSV path for a list, keyed by stable label (date-free). */
+export function listFilePath(listType: ListType): string {
+  return path.join(listsDir(), `${fileLabel(listType)}.csv`);
+}
+
+function listManifestPath(): string {
+  return path.join(listsDir(), "manifest.json");
+}
+
+/** Number of seeded personas, read from the prerender manifest (0 if absent). */
+export function seededCount(): number {
+  try {
+    const n = JSON.parse(readFileSync(listManifestPath(), "utf8")).count;
+    return typeof n === "number" ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
 /** Read the seeded personal records back into a collection. */
 export function loadPersonas(): PersonaCollection {
   return readCsv(config.personalCsv);
 }
 
-export function seed(): void {
-  writeCsv(PEOPLE, config.personalCsv);
+/**
+ * Prerender one hashed CSV per list type to disk so the download route can
+ * stream bytes straight from the filesystem — no per-request persona parsing
+ * or hashing. Each file is `Id,Hash` with one row per persona (Id = 1-based
+ * position). A manifest records the total count for synthetic "missing" rows.
+ */
+function writeLists(people: PersonaCollection): void {
+  mkdirSync(listsDir(), { recursive: true });
+  for (const listType of LIST_TYPES) {
+    let body = "Id,Hash\n";
+    for (let i = 0; i < people.personas.length; i++) {
+      body += `${i + 1},${hashFor(people.personas[i], listType)}\n`;
+    }
+    writeFileSync(listFilePath(listType), body, "utf8");
+  }
+  writeFileSync(
+    listManifestPath(),
+    JSON.stringify({ count: people.personas.length }),
+    "utf8",
+  );
+}
+
+/** Write personal.csv and the prerendered hashed lists. Returns the count. */
+export function seed(count: number = TARGET_COUNT): number {
+  const people = buildCollection(count);
+  writeCsv(people, config.personalCsv);
+  writeLists(people);
+  return people.personas.length;
 }

@@ -1,8 +1,21 @@
 /** Render the seeded personal data (with derived hashes) as a standalone HTML page. */
 
+import { createReadStream } from "node:fs";
+import { createInterface } from "node:readline";
+import { config } from "./config";
+import { parseLine } from "./csv";
 import { LIST_TYPES } from "./lists";
-import { csvFieldnames, hashFor, numbered, personaValues } from "./persona";
-import { loadPersonas } from "./seed";
+import {
+  csvFieldnames,
+  hashFor,
+  type Persona,
+  PERSONAL_FIELDS,
+  personaValues,
+} from "./persona";
+
+// Cap the rows rendered: the preview is a dev eyeball tool, and materializing
+// the full 300k-row table as one HTML string would exhaust memory.
+const PREVIEW_LIMIT = 1000;
 
 /** Escape per Python's html.escape(quote=True): & < > " '. */
 function escapeHtml(s: string): string {
@@ -14,8 +27,46 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#x27;");
 }
 
+interface PreviewRow {
+  id: string;
+  persona: Persona;
+}
+
+/** Stream up to PREVIEW_LIMIT data rows from personal.csv without loading it whole. */
+async function readLimited(): Promise<{ rows: PreviewRow[]; truncated: boolean }> {
+  const rl = createInterface({
+    input: createReadStream(config.personalCsv),
+    crlfDelay: Infinity,
+  });
+  const rows: PreviewRow[] = [];
+  const index: Record<string, number> = {};
+  let haveHeader = false;
+  let truncated = false;
+
+  for await (const line of rl) {
+    if (!haveHeader) {
+      if (line === "") continue;
+      parseLine(line).forEach((name, i) => (index[name] = i));
+      haveHeader = true;
+      continue;
+    }
+    if (line === "") continue;
+    if (rows.length >= PREVIEW_LIMIT) {
+      truncated = true;
+      break;
+    }
+    const fields = parseLine(line);
+    if (fields.length <= 1) continue;
+    const persona = {} as Persona;
+    for (const name of PERSONAL_FIELDS) persona[name] = fields[index[name]] ?? "";
+    rows.push({ id: fields[index.Id] ?? "", persona });
+  }
+  rl.close();
+  return { rows, truncated };
+}
+
 /** Render CSV rows (first row = header) as a standalone HTML table. */
-function renderTable(rows: string[][]): string {
+function renderTable(rows: string[][], truncated: boolean): string {
   let body: string;
   if (rows.length === 0) {
     body = "<p>No data.</p>";
@@ -28,10 +79,12 @@ function renderTable(rows: string[][]): string {
           "<tr>" + row.map((c) => `<td>${escapeHtml(c)}</td>`).join("") + "</tr>",
       )
       .join("");
+    const note = truncated
+      ? `<p>Showing the first ${data.length} rows.</p>`
+      : `<p>${data.length} records</p>`;
     body =
       `<table><thead><tr>${head}</tr></thead>` +
-      `<tbody>${cells}</tbody></table>` +
-      `<p>${data.length} records</p>`;
+      `<tbody>${cells}</tbody></table>${note}`;
   }
   return (
     "<!doctype html><html><head><meta charset='utf-8'>" +
@@ -47,20 +100,20 @@ function renderTable(rows: string[][]): string {
 
 /**
  * Build the dev-only preview HTML: each person's raw fields alongside the
- * derived hash for all six list types.
+ * derived hash for all six list types. Capped at PREVIEW_LIMIT rows.
  */
-export function renderPreview(): string {
-  const personas = loadPersonas();
-  const rows: string[][] = [];
-  if (personas.personas.length > 0) {
-    rows.push([...csvFieldnames(), ...LIST_TYPES.map((t) => t.valueOf())]);
-    for (const [recordId, persona] of numbered(personas)) {
-      rows.push([
-        String(recordId),
+export async function renderPreview(): Promise<string> {
+  const { rows, truncated } = await readLimited();
+  const table: string[][] = [];
+  if (rows.length > 0) {
+    table.push([...csvFieldnames(), ...LIST_TYPES.map((t) => t.valueOf())]);
+    for (const { id, persona } of rows) {
+      table.push([
+        String(id),
         ...personaValues(persona),
         ...LIST_TYPES.map((t) => hashFor(persona, t)),
       ]);
     }
   }
-  return renderTable(rows);
+  return renderTable(table, truncated);
 }

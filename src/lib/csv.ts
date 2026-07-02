@@ -16,7 +16,7 @@ export function parseCsv(text: string): string[][] {
   return lines.map(parseLine);
 }
 
-function parseLine(line: string): string[] {
+export function parseLine(line: string): string[] {
   if (line === "") return [];
   const fields: string[] = [];
   let field = "";

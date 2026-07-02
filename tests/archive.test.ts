@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { type DownloadOpts, streamZip } from "@/lib/archive";
 import { LIST_TYPES, ListType } from "@/lib/lists";
 import * as normalize from "@/lib/normalize";
-import { PEOPLE } from "@/lib/seed";
+import { buildPeople } from "@/lib/seed";
 import { parseCsv } from "@/lib/csv";
-import { seedTemp } from "./helpers";
+import { SEED_COUNT, seedTemp } from "./helpers";
+
+// Deterministic reference for what seedTemp() wrote (same count, same RNG).
+const PEOPLE = buildPeople(SEED_COUNT);
 
 beforeEach(() => {
   seedTemp();
