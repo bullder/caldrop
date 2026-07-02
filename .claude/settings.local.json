@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(node *)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(npx tsx -e ' *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(npx eslint *)",
+      "Bash(xargs cat)",
+      "Bash(git -C /Users/mike/code/caldrop.nextjs show --stat cecbe17)",
+      "Bash(git -C /Users/mike/code/caldrop.nextjs status --short)",
+      "Bash(sed -n '/export function generatePersona/,/{/p' src/lib/seed.ts)",
+      "Bash(sed -n '/export function makeLcg/,/}/p' src/lib/seed.ts)",
+      "Bash(python3 scripts/drop_seed_warehouse.py)",
+      "Bash(grep -oE '^[0-9]{8}$|^[0-9]{2}/|^[0-9]{2}-[0-9]{2}-')",
+      "Bash(cd *)",
+      "Bash(sed -n '20,35p' tests/sandbox.test.ts)",
+      "Bash(npx vitest *)"
+    ]
+  }
+}
