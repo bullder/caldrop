@@ -8,9 +8,10 @@ import { existsSync } from "node:fs";
 import { type DownloadOpts, streamZip } from "./archive";
 import { requireApiKey } from "./auth";
 import { config } from "./config";
-import { LIST_TYPES, parseLists } from "./lists";
+import { LIST_TYPES, ListType, parseLists } from "./lists";
 import { logRequest, startTimer } from "./logger";
 import { persistUpload } from "./persist";
+import { listFilePath } from "./seed";
 import { processUpload } from "./upload";
 
 /** Parse a non-negative integer query param; undefined when absent. */
@@ -50,17 +51,21 @@ export function handleDownload(req: Request): Response {
   try {
     opts = {
       limit: parseCount(params.get("limit"), "limit"),
-      missing: parseCount(params.get("missing"), "missing"),
+      // Default 0: the amend-CSV seed (npm run seed:amend) delivers exactly the
+      // seeded real records with no synthetic non-matching rows. ?missing=N adds them.
+      missing: parseCount(params.get("missing"), "missing") ?? 0,
     };
   } catch (e) {
     logRequest(req, 400, start);
     return Response.json({ detail: (e as Error).message }, { status: 400 });
   }
 
-  if (!existsSync(config.personalCsv)) {
+  // The download streams the prerendered per-list CSVs, so gate on those (the
+  // amend-CSV seed writes the lists but not personal.csv).
+  if (!existsSync(listFilePath(ListType.EMAIL))) {
     logRequest(req, 500, start, "not-seeded");
     return Response.json(
-      { detail: "Sample data not seeded. Run: npm run seed" },
+      { detail: "Sample data not seeded. Run: npm run seed:amend (or npm run seed)" },
       { status: 500 },
     );
   }

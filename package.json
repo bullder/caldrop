@@ -6,10 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run seed",
+    "prebuild": "npm run seed:amend",
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",
+    "seed:amend": "tsx scripts/seed_amend.ts",
     "seed:warehouse": "python3 scripts/drop_seed_warehouse.py --csv data/personal.csv --out data/spine_seed.sql",
     "snowflake": "tsx scripts/snowflake.ts",
     "db:init": "tsx scripts/db-init.ts",

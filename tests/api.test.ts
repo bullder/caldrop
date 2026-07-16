@@ -3,9 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { GET as download } from "@/app/data/download/route";
 import { POST as amend } from "@/app/data/amend/route";
 import { POST as upload } from "@/app/data/upload/route";
-import { config } from "@/lib/config";
-import { LIST_TYPES } from "@/lib/lists";
-import path from "node:path";
+import { LIST_TYPES, ListType } from "@/lib/lists";
+import { listFilePath } from "@/lib/seed";
+import { rmSync } from "node:fs";
 import { authHeaders, csvUpload, seedTemp } from "./helpers";
 
 beforeEach(() => {
@@ -91,7 +91,9 @@ describe("download", () => {
   });
 
   it("500 when not seeded", async () => {
-    config.personalCsv = path.join(config.dataDir, "missing.csv");
+    // Download streams the prerendered lists, so removing the EMAIL list is what
+    // makes it "not seeded" (the guard no longer checks personal.csv).
+    rmSync(listFilePath(ListType.EMAIL), { force: true });
     const r = await download(downloadReq());
     expect(r.status).toBe(500);
     expect((await r.json()).detail.toLowerCase()).toContain("seed");
