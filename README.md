@@ -45,6 +45,22 @@ identical behavior:
 
 `/preview` is dev-only and is **not** mirrored under `/sandbox`.
 
+### Edge-case test keys
+
+Beyond the two happy-path keys, `X-API-KEY` also selects opt-in edge-case
+behaviors (see `src/lib/testBehaviors.ts`) for exercising client error
+handling the happy-path keys can't produce — dev/test only, works on both
+`/data/*` and `/sandbox/data/*`:
+
+| Key | Endpoint | Behavior |
+|-----|----------|----------|
+| `edge-nodata-key` | `GET .../download` | `200` with a `{"message": ...}` JSON body instead of a ZIP (no new data) |
+| `edge-batch-incomplete-key` | `GET .../download` | `409` (previous batch not fully uploaded) |
+| `edge-building-key` | `GET .../download` | `202` + `Retry-After: 1`, every call (archive never finishes building) |
+| `edge-malformed-key` | `GET .../download` | `200` with a non-ZIP body that also isn't a valid `{"message"}` shape |
+| `edge-dup-filename-key` | `POST .../upload` | Rejects the first upload of a given filename ("same filename..."); a retry of the *same* filename accepts |
+| `edge-reject-key` | `POST .../upload` | Always rejects, even on retry |
+
 ## Seed
 
 `src/lib/seed.ts` holds sample consumers with personal info (name, DOB, ZIP,
