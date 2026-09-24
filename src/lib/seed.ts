@@ -161,7 +161,7 @@ export function generatePersona(i: number, rng: () => number): Persona {
   return persona(first, last, dob, zip, email, phone, maid, vin, ctvid);
 }
 
-const TARGET_COUNT = 1500;
+const TARGET_COUNT = 200;
 
 // The first NOTEBOOK_COUNT personas of the seed stream are what the fidesplus
 // demo notebook (fides_uploads/demo_drop/demo_drop_seed.ipynb) loads into the
