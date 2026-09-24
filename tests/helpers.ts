@@ -6,7 +6,7 @@ import { seed } from "@/lib/seed";
 
 export const API_KEY = "dev-key-123";
 
-// Small seed for tests instead of the production default (1500).
+// Small seed for tests instead of the production default (200).
 // buildPeople(SEED_COUNT) reproduces this exact prefix.
 export const SEED_COUNT = 25;
 

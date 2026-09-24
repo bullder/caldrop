@@ -7,8 +7,8 @@ import { buildPeople } from "@/lib/seed";
 // which seeds the first 500 personas of the seed stream into the warehouse.
 const NOTEBOOK_ROW_1 = "xH5O+b5WR6TPr3/VcZGAUAEG7cikatxTqHnHJnHQdZ8="; // Lily.Anne@example.com
 const NOTEBOOK_ROW_2 = "Rj3Jm6Cot9sYYp9hRuqpSS+wlNPbXfwmnVylGYNDWTk="; // marcus.damico@example.com
-const NOTEBOOK_ROW_150 = "ELij/wdZucTuTMc8rX4eW1pxKoqMbT2jXCvw//Qb9fE="; // user134_0@example1.com
-const NOTEBOOK_ROW_500 = "HJRbANSw8XsVDuimTreRDVOw9VONsfx4fRRxohHqwbs="; // user484_0@example9.com
+const NOTEBOOK_ROW_20 = "D2kTQQ0U6ICGe6Qc1nDOUQWd3AVbIS4onvKJHzqOAhI="; // user4_0@example8.com
+const NOTEBOOK_ROW_21 = "5KbGK59xVD+VQdkkELQ2t2MLsIWNNPWMmUCLDBYm6q4="; // user5_0@example1.com
 // Shared/junk-pool emails the notebook also holds (rows 104, 171, 328).
 const NOTEBOOK_POOL = [
   "vFxvQIrngs69jdRx6syFZLWJ4J4H3/fWeCo1JTjFOwU=", // info@shared.com
@@ -20,22 +20,22 @@ describe("buildPeople (default)", () => {
   const people = buildPeople();
   const emails = people.personas.map((p) => hashFor(p, ListType.EMAIL));
 
-  it("seeds 1500 records with unique ids", () => {
-    expect(people.personas).toHaveLength(1500);
-    expect(new Set(people.ids).size).toBe(1500);
+  it("seeds 200 records with unique ids", () => {
+    expect(people.personas).toHaveLength(200);
+    expect(new Set(people.ids).size).toBe(200);
   });
 
-  it("places notebook rows 1-150 at every 10th row, in order", () => {
+  it("places notebook rows 1-20 at every 10th row, in order", () => {
     expect(emails[0]).toBe(NOTEBOOK_ROW_1);
     expect(emails[10]).toBe(NOTEBOOK_ROW_2);
-    expect(emails[1490]).toBe(NOTEBOOK_ROW_150);
-    expect(emails).not.toContain(NOTEBOOK_ROW_500);
+    expect(emails[190]).toBe(NOTEBOOK_ROW_20);
+    expect(emails).not.toContain(NOTEBOOK_ROW_21);
   });
 
   it("keeps notebook emails off the other 90% of rows", () => {
     const fillers = new Set(emails.filter((_, i) => i % 10 !== 0));
     const matches = emails.filter((_, i) => i % 10 === 0);
-    expect(matches).toHaveLength(150);
+    expect(matches).toHaveLength(20);
     for (const h of [...matches, ...NOTEBOOK_POOL]) expect(fillers.has(h)).toBe(false);
   });
 
