@@ -161,29 +161,69 @@ export function generatePersona(i: number, rng: () => number): Persona {
   return persona(first, last, dob, zip, email, phone, maid, vin, ctvid);
 }
 
-const TARGET_COUNT = 500;
+const TARGET_COUNT = 1500;
+
+// The first NOTEBOOK_COUNT personas of the seed stream are what the fidesplus
+// demo notebook (fides_uploads/demo_drop/demo_drop_seed.ipynb) loads into the
+// warehouse — copied from /preview when they were the whole dataset. Every
+// MATCH_EVERY-th seeded row is the next of those, in order, so 10% of the
+// download's EMAIL rows hit the warehouse index; every other row is a later
+// stream persona whose email the notebook does not hold.
+const NOTEBOOK_COUNT = 500;
+const MATCH_EVERY = 10;
 
 // Base timestamp for seeded UUIDs: 2025-01-01T00:00:00.000Z
 const ID_BASE_MS = 1735689600000;
 
-function buildCollection(count: number = TARGET_COUNT): PersonaCollection {
-  const personaRng = makeLcg(42);
-  const personas: Persona[] = [...HAND_CRAFTED];
-  for (let i = 0; i < count - HAND_CRAFTED.length; i++) {
-    personas.push(generatePersona(i, personaRng));
-  }
+interface SeededPersona {
+  persona: Persona;
+  id: string;
+}
 
+/**
+ * Endless deterministic persona stream: the hand-crafted edge cases, then
+ * generated personas. Each id is tied to its stream position, so a persona
+ * keeps the same id wherever it lands in the seeded collection.
+ */
+function* personaStream(): Generator<SeededPersona, never> {
+  const personaRng = makeLcg(42);
   const uuidRng = makeLcg(1337);
-  const ids = personas.map((_, i) =>
-    uuidv7Seeded(
+  for (let i = 0; ; i++) {
+    const persona =
+      i < HAND_CRAFTED.length
+        ? HAND_CRAFTED[i]
+        : generatePersona(i - HAND_CRAFTED.length, personaRng);
+    const id = uuidv7Seeded(
       ID_BASE_MS + i,
       Math.floor(uuidRng() * 0x1000),
       Math.floor(uuidRng() * 0x40000000),
       (uuidRng() * 0x100000000) >>> 0,
-    ),
-  );
+    );
+    yield { persona, id };
+  }
+}
 
-  return { personas, ids };
+function buildCollection(count: number = TARGET_COUNT): PersonaCollection {
+  const stream = personaStream();
+  const notebook = Array.from({ length: NOTEBOOK_COUNT }, () => stream.next().value);
+  const notebookEmails = new Set(notebook.map((s) => hashFor(s.persona, ListType.EMAIL)));
+
+  const seeded: SeededPersona[] = [];
+  let matched = 0;
+  for (let row = 0; row < count; row++) {
+    if (row % MATCH_EVERY === 0 && matched < notebook.length) {
+      seeded.push(notebook[matched++]);
+      continue;
+    }
+    // Skip shared/junk-pool emails that also appear in the notebook's rows.
+    let next = stream.next().value;
+    while (notebookEmails.has(hashFor(next.persona, ListType.EMAIL))) {
+      next = stream.next().value;
+    }
+    seeded.push(next);
+  }
+
+  return { personas: seeded.map((s) => s.persona), ids: seeded.map((s) => s.id) };
 }
 
 // Build the sample-consumer collection on demand. Deliberately NOT a

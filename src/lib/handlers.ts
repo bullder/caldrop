@@ -87,8 +87,8 @@ export function handleDownload(req: Request): Response {
   try {
     opts = {
       limit: parseCount(params.get("limit"), "limit"),
-      // Default 0: the amend-CSV seed (npm run seed:amend) delivers exactly the
-      // seeded real records with no synthetic non-matching rows. ?missing=N adds them.
+      // Default 0: deliver exactly the seeded records with no synthetic
+      // non-matching rows. ?missing=N adds them.
       missing: parseCount(params.get("missing"), "missing") ?? 0,
     };
   } catch (e) {
