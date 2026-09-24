@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev",
-    "prebuild": "npm run seed:amend",
+    "prebuild": "npm run seed",
     "build": "next build",
     "start": "next start",
     "seed": "tsx scripts/seed.ts",

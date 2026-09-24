@@ -6,8 +6,8 @@ import { seed } from "@/lib/seed";
 
 export const API_KEY = "dev-key-123";
 
-// Small seed for tests — the production default (300k) would seed a 50MB CSV
-// on every beforeEach. buildPeople(SEED_COUNT) reproduces this exact prefix.
+// Small seed for tests instead of the production default (1500).
+// buildPeople(SEED_COUNT) reproduces this exact prefix.
 export const SEED_COUNT = 25;
 
 /** Point config at a fresh temp dir, pin the file date, and seed it. */
